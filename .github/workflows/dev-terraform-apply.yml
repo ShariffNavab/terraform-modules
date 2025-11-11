@@ -47,9 +47,9 @@ jobs:
         ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID_DEV }}
         ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
-        
+
     - name: Terraform Apply
-      run: terraform apply -input=false -auto-approve plan.tfplan
+      run: terraform apply -input=false -auto-approve terraform.tfplan
       working-directory: ${{ env.TF_WORKING_DIR }}
       env:
         ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
