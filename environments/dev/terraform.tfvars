@@ -10,7 +10,7 @@ resource_groups = {
     }
   },
   dev-rg-2 = {
-    location = "centralindia"
+    location = "southindia"
     tags = {
       environment = "dev"
       project     = "dev-app"
