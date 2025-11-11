@@ -1,0 +1,102 @@
+name: 'Terraform Plan - Dev'
+
+on:
+  pull_request:
+    branches: [ main ]
+    types: [opened, synchronize, reopened]
+    paths:
+      - 'environments/dev/**'
+      - 'modules/**'
+
+env:
+  TF_WORKING_DIR: 'environments/dev'
+
+jobs:
+  terraform-plan:
+    name: 'Terraform Plan'
+    runs-on: ubuntu-latest
+    environment: dev-plan
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: 1.5.0
+
+    - name: Terraform Format
+      id: fmt
+      run: terraform fmt -check -recursive
+      working-directory: ${{ env.TF_WORKING_DIR }}
+
+    - name: Terraform Init
+      id: init
+      run: terraform init
+      working-directory: ${{ env.TF_WORKING_DIR }}
+      env:
+        ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+        ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID_DEV }}
+        ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+    - name: Terraform Validate
+      id: validate
+      run: terraform validate -no-color
+      working-directory: ${{ env.TF_WORKING_DIR }}
+
+    - name: Terraform Plan
+      id: plan
+      run: |
+        terraform plan -input=false -no-color -out=plan.tfplan
+        echo "PLAN_SUMMARY<<EOF" >> $GITHUB_ENV
+        terraform show -no-color plan.tfplan >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
+      working-directory: ${{ env.TF_WORKING_DIR }}
+      env:
+        ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+        ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID_DEV }}
+        ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+    - name: Upload Terraform Plan
+      uses: actions/upload-artifact@v4
+      with:
+        name: terraform-plan-dev
+        path: ${{ env.TF_WORKING_DIR }}/plan.tfplan
+        retention-days: 1
+
+    - name: Add Plan as PR Comment
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const output = `### 🔍 Terraform Plan - Dev Environment
+
+          #### Quality Checks:
+          ✅ **Format**: \`${{ steps.fmt.outcome }}\`
+          ✅ **Init**: \`${{ steps.init.outcome }}\`  
+          ✅ **Validate**: \`${{ steps.validate.outcome }}\`
+          ✅ **Plan**: \`${{ steps.plan.outcome }}\`
+
+          #### Plan Summary:
+          <details>
+          <summary>📋 Click to see full plan</summary>
+
+          \`\`\`terraform
+          ${process.env.PLAN_SUMMARY}
+          \`\`\`
+
+          </details>
+
+          ---
+          *PR: #${{ github.event.pull_request.number }} | Commit: \`${{ github.event.pull_request.head.sha }}\`*`;
+
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: output
+          })

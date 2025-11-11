@@ -8,12 +8,4 @@ resource_groups = {
       managed-by  = "terraform"
     }
   },
-  dev-app-rg-2 = {
-    location = "southindia"
-    tags = {
-      environment = "dev"
-      project     = "demo-2-app"
-      managed-by  = "terraform"
-    }
-  },
 }
