@@ -6,6 +6,15 @@ resource_groups = {
       environment = "dev"
       project     = "dev-app"
       managed-by  = "terraform"
+      owner = "shariff"
+    }
+  },
+  dev-rg-2 = {
+    location = "centralindia"
+    tags = {
+      environment = "dev"
+      project     = "dev-app"
+      managed-by  = "terraform"
     }
   },
 }
