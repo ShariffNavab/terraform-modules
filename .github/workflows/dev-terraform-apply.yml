@@ -2,15 +2,15 @@ name: 'Terraform Apply - Dev'
 
 on:
   workflow_dispatch:  # Manual trigger only
-  push:
-    branches: [ main ]
-    paths:
-      - 'environments/dev/**'
+  # push:
+  #   branches: [ main ]
+  #   paths:
+  #     - 'environments/dev/**'
 
 permissions:
   contents: read
   pull-requests: write
-  
+
 env:
   TF_WORKING_DIR: 'environments/dev'
 
@@ -29,12 +29,6 @@ jobs:
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
 
-    - name: Download Terraform Plan
-      uses: actions/download-artifact@v4
-      with:
-        name: terraform-plan-dev
-        path: ${{ env.TF_WORKING_DIR }}
-
     - name: Terraform Init
       run: terraform init
       working-directory: ${{ env.TF_WORKING_DIR }}
@@ -44,6 +38,16 @@ jobs:
         ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID_DEV }}
         ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
+    - name: Terraform Plan
+      run: terraform plan -out=terraform.tfplan
+      working-directory: environments/dev
+      env:
+        ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+        ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID_DEV }}
+        ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+        
     - name: Terraform Apply
       run: terraform apply -input=false -auto-approve plan.tfplan
       working-directory: ${{ env.TF_WORKING_DIR }}

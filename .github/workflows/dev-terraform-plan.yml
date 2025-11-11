@@ -67,12 +67,6 @@ jobs:
         ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID_DEV }}
         ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
-    - name: Upload Terraform Plan
-      uses: actions/upload-artifact@v4
-      with:
-        name: terraform-plan-dev
-        path: ${{ env.TF_WORKING_DIR }}/plan.tfplan
-        retention-days: 1
 
     - name: Add Plan as PR Comment
       uses: actions/github-script@v6
