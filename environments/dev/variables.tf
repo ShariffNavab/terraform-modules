@@ -17,12 +17,12 @@ variable "storage_accounts" {
     account_tier             = string
     account_replication_type = string
     account_kind             = string
-    
+
     # Static website configuration
     static_website_enabled = optional(bool, false)
     index_document         = optional(string, "index.html")
     error_404_document     = optional(string, "404.html")
-    
+
     tags = map(string)
   }))
   default = {}
