@@ -1,10 +1,10 @@
 # Resource Group configurations - ACTUAL VALUES
 resource_groups = {
-  dev-app-rg = {
+  dev-rg-1 = {
     location = "centralindia"
     tags = {
       environment = "dev"
-      project     = "demo-app"
+      project     = "dev-app"
       managed-by  = "terraform"
     }
   },
