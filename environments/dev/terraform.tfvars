@@ -21,10 +21,10 @@ storage_accounts = {
     account_replication_type = "LRS"
     account_kind             = "StorageV2"
 
-    static_website_enabled   = true
-    index_document           = "index.html"
-    error_404_document       = "404.html"
-    
+    static_website_enabled = true
+    index_document         = "index.html"
+    error_404_document     = "404.html"
+
     tags = {
       environment = "dev"
       purpose     = "frontend"
