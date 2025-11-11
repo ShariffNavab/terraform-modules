@@ -6,7 +6,7 @@ resource_groups = {
       environment = "dev"
       project     = "dev-app"
       managed-by  = "terraform"
-      owner = "shariff"
+      owner       = "shariff"
     }
   },
   dev-rg-2 = {
