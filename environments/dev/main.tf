@@ -9,7 +9,7 @@ module "resource_groups" {
 # Storage Account Module
 
 module "storage_accounts" {
-  source = "../../modules/storage_account"
+  source = "../../modules/storage-accounts"
 
   storage_accounts = var.storage_accounts
   containers       = var.containers
