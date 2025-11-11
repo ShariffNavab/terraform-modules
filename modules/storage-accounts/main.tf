@@ -25,7 +25,7 @@ resource "azurerm_storage_account_static_website" "static_website" {
 resource "azurerm_storage_container" "containers" {
   for_each = var.containers
 
-  name                  = each.key
-  storage_account_name  = azurerm_storage_account.storage[each.value.storage_account_key].name
+  name                 = each.key
+  storage_account_id   = azurerm_storage_account.storage[each.value.storage_account_key].id
   container_access_type = each.value.access_type
 }
