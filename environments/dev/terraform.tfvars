@@ -29,25 +29,29 @@ storage_accounts = {
       environment = "dev"
       purpose     = "frontend"
     }
+  },
+  "devstgapp001" = {
+    name                     = "devstgapp001"
+    resource_group_name      = "dev-rg"
+    location                 = "southindia"
+    account_tier             = "Standard"
+    account_replication_type = "LRS"
+    account_kind             = "StorageV2"
+    static_website_enabled   = false
+    tags = {
+      environment = "dev"
+      purpose     = "backend"
+    }
   }
-  # "devstgapp001" = {
-  #   name                     = "devstgapp001"
-  #   resource_group_name      = "dev-app-rg"
-  #   location                 = "centralindia"
-  #   account_tier             = "Standard"
-  #   account_replication_type = "LRS"
-  #   account_kind             = "StorageV2"
-  #   static_website_enabled   = false
-  #   tags = {
-  #     environment = "dev"
-  #     purpose     = "backend"
-  #   }
-  # }
 }
 
 containers = {
   "cont1" = {
     storage_account_key = "devstgweb001"
+    access_type         = "private"
+  }
+  "appcntr" = {
+    storage_account_key = "devstgapp001"
     access_type         = "private"
   }
 }
