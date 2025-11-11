@@ -8,15 +8,18 @@ resource "azurerm_storage_account" "storage" {
   account_replication_type = each.value.account_replication_type
   account_kind             = each.value.account_kind
 
-  # Static website hosting
-  static_website {
-    index_document     = each.value.static_website_enabled ? each.value.index_document : null
-    error_404_document = each.value.static_website_enabled ? each.value.error_404_document : null
-  }
-
   tags = merge(each.value.tags, {
     managed-by = "terraform"
   })
+}
+
+
+resource "azurerm_storage_account_static_website" "static_website" {
+  for_each = { for k, v in var.storage_accounts : k => v if v.static_website_enabled }
+
+  storage_account_id = azurerm_storage_account.storage[each.key].id
+  index_document     = each.value.index_document
+  error_404_document = each.value.error_404_document
 }
 
 resource "azurerm_storage_container" "containers" {
