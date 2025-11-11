@@ -60,19 +60,42 @@ jobs:
     - name: Get Terraform Outputs
       id: outputs
       run: |
-        echo "RESOURCE_GROUPS<<EOF" >> $GITHUB_OUTPUT
-        terraform output -json 2>/dev/null || echo "No outputs available" >> $GITHUB_OUTPUT
-        echo "EOF" >> $GITHUB_OUTPUT
+        # Try to get outputs with proper authentication
+        if terraform output -json > /tmp/tf_outputs.json 2>/dev/null; then
+          echo "RESOURCE_GROUPS<<EOF" >> $GITHUB_OUTPUT
+          cat /tmp/tf_outputs.json >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+        else
+          echo "RESOURCE_GROUPS={\"message\": \"No outputs available or failed to fetch\"}" >> $GITHUB_OUTPUT
+        fi
       working-directory: ${{ env.TF_WORKING_DIR }}
+      env:
+        ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+        ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      continue-on-error: true
 
     - name: Create Deployment Summary
       run: |
         echo "## 🚀 Terraform Apply Completed Successfully!" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "### 📦 Created/Updated Resources:" >> $GITHUB_STEP_SUMMARY
-        echo '```json' >> $GITHUB_STEP_SUMMARY
-        echo '${{ steps.outputs.outputs.RESOURCE_GROUPS }}' >> $GITHUB_STEP_SUMMARY
-        echo '```' >> $GITHUB_STEP_SUMMARY
+        echo "### 📦 Deployment Summary:" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Status:** ✅ Applied successfully" >> $GITHUB_STEP_SUMMARY
         echo "**Environment:** dev" >> $GITHUB_STEP_SUMMARY
         echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        # Only show outputs if they exist and are valid
+        OUTPUTS='${{ steps.outputs.outputs.RESOURCE_GROUPS }}'
+        if [[ "$OUTPUTS" != "{\"message\": \"No outputs available or failed to fetch\"}" ]] && \
+          [[ "$OUTPUTS" != "{}" ]]; then
+          echo "### 📊 Terraform Outputs:" >> $GITHUB_STEP_SUMMARY
+          echo '```json' >> $GITHUB_STEP_SUMMARY
+          echo "$OUTPUTS" | jq '.' 2>/dev/null || echo "$OUTPUTS" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+        else
+          echo "### ℹ️ Note:" >> $GITHUB_STEP_SUMMARY
+          echo "No Terraform outputs were defined in this configuration." >> $GITHUB_STEP_SUMMARY
+        fi
