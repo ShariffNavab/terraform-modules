@@ -47,9 +47,5 @@ containers = {
   "cont1" = {
     storage_account_key = "devstgweb001"
     access_type         = "private"
-  },
-  "cont2" = {
-    storage_account_key = "devstgweb001"
-    access_type         = "private"
   }
 }
