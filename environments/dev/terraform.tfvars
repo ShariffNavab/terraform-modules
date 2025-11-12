@@ -10,8 +10,8 @@ resource_groups = {
   }
   qa-rg = {
     location = "centralindia"
-    tags ={
-      
+    tags = {
+
     }
   }
 }
