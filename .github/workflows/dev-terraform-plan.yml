@@ -58,7 +58,7 @@ jobs:
     - name: Terraform Plan
       id: plan
       run: |
-        # Run plan with detailed exit code to detect changes
+        # Run plan and capture exit code
         set +e
         terraform plan -input=false -no-color -out=plan.tfplan -detailed-exitcode
         PLAN_EXIT_CODE=$?
@@ -90,34 +90,11 @@ jobs:
           echo "✅ No changes detected"
         fi
       working-directory: ${{ env.TF_WORKING_DIR }}
-
-    - name: Verify No Real Changes
-      run: |
-        echo "=== 🛡️ FALSE POSITIVE VERIFICATION ==="
-        
-        # Check if storage account actually has changes
-        terraform show -json plan.tfplan | \
-        jq -r '.resource_changes[] | select(.address | contains("storage_account")) | 
-          "🔍 \(.address): \(.change.actions[]) | Identical Config: \(.change.before == .change.after)"' > verification.txt
-        
-        echo "📊 Analysis Results:"
-        cat verification.txt
-        
-        # Count actual property changes
-        terraform show -json plan.tfplan | \
-        jq -r '.resource_changes[] | select(.address | contains("storage_account")) | 
-          .change | keys | map(select(. != "actions")) | length' > change_count.txt
-        
-        CHANGE_COUNT=$(cat change_count.txt)
-        echo "📈 Properties with changes: $CHANGE_COUNT"
-        
-        if [ "$CHANGE_COUNT" -eq "0" ]; then
-          echo "✅ CONFIRMED: No real changes - Safe to apply!"
-        else
-          echo "⚠️  Warning: $CHANGE_COUNT properties may change"
-        fi
-      working-directory: ${{ env.TF_WORKING_DIR }}
-
+      env:
+        ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+        ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID_DEV }}
+        ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
     - name: Add Plan as PR Comment
       uses: actions/github-script@v6
