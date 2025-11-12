@@ -20,6 +20,7 @@ resource_groups = {
   }
 }
 
+
 # storage-accounts configurations - ACTUAL VALUES
 storage_accounts = {
   "devstgweb001" = {
