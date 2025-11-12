@@ -9,13 +9,6 @@ resource "azurerm_storage_account" "storage" {
   account_kind             = each.value.account_kind
 
   tags = each.value.tags
-  lifecycle {
-    # This tells Terraform to ignore any drift detected on the tags attribute.
-    # Use this only as a last resort to suppress non-critical changes.
-    ignore_changes = [
-      tags,
-    ]
-  }
 }
 
 
@@ -26,6 +19,7 @@ resource "azurerm_storage_account_static_website" "static_website" {
   index_document     = each.value.index_document
   error_404_document = each.value.error_404_document
 }
+
 
 resource "azurerm_storage_container" "containers" {
   for_each = var.containers
