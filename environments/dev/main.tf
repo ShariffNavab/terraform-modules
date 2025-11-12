@@ -12,7 +12,6 @@ module "storage_accounts" {
 
   storage_accounts = var.storage_accounts
   containers       = var.containers
-
   # UNCOMMENT ONLY IF using Terraform-managed RGs (created by module.resource_groups for this execution)
   # depends_on = [module.resource_groups]
 }

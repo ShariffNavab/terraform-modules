@@ -48,6 +48,7 @@ jobs:
         ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID_DEV }}
         ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
+
     - name: Terraform Validate
       id: validate
       run: terraform validate -no-color
@@ -95,6 +96,26 @@ jobs:
         ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID_DEV }}
         ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
+    - name: Debug Exact Storage Account Changes
+      run: |
+        echo "=== EXACT STORAGE ACCOUNT CHANGES ==="
+        terraform show -json plan.tfplan | \
+        jq -r '.resource_changes[] | select(.address | contains("storage_account")) | .change' > storage_changes.json
+        
+        echo "Raw changes:"
+        cat storage_changes.json
+        
+        echo "=== PROPERTIES CHANGING ==="
+        terraform show -json plan.tfplan | \
+        jq -r '.resource_changes[] | select(.address | contains("storage_account")) | .change.after' > after.json
+        
+        terraform show -json plan.tfplan | \
+        jq -r '.resource_changes[] | select(.address | contains("storage_account")) | .change.before' > before.json
+        
+        echo "If these are identical, it's a false positive update"
+        diff before.json after.json || echo "No differences found - false positive"
+      working-directory: ${{ env.TF_WORKING_DIR }}
+      
     - name: Add Plan as PR Comment
       uses: actions/github-script@v6
       with:
