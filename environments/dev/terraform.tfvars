@@ -12,8 +12,8 @@ resource_groups = {
     location = "centralindia"
     tags = {
       environment = "dummy"
-      project     = "dummy-app"
-      managed-by  = "terraform"
+      project     = "dev-app"
+      managed-by  = "shariff"
     }
   }
 }
