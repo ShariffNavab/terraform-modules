@@ -9,9 +9,13 @@ resource "azurerm_storage_account" "storage" {
   account_kind             = each.value.account_kind
 
   tags = each.value.tags
-  # tags = merge(each.value.tags, {
-  #   managed-by = "terraform"
-  # })
+  lifecycle {
+    # This tells Terraform to ignore any drift detected on the tags attribute.
+    # Use this only as a last resort to suppress non-critical changes.
+    ignore_changes = [
+      tags,
+    ]
+  }
 }
 
 
