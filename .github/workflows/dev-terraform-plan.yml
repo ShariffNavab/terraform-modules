@@ -55,39 +55,92 @@ jobs:
       working-directory: ${{ env.TF_WORKING_DIR }}
 
 
+    # - name: Terraform Plan
+    #   id: plan
+    #   run: |
+    #     # Run plan and capture exit code
+    #     set +e
+    #     terraform plan -input=false -no-color -out=plan.tfplan -detailed-exitcode
+    #     PLAN_EXIT_CODE=$?
+    #     set -e
+        
+    #     # Show the detailed plan
+    #     echo "PLAN_SUMMARY<<EOF" >> $GITHUB_ENV
+    #     terraform show -no-color plan.tfplan >> $GITHUB_ENV
+    #     echo "EOF" >> $GITHUB_ENV
+        
+    #     # Analyze what's changing
+    #     echo "=== RESOURCE CHANGE ANALYSIS ===" > change_analysis.txt
+    #     terraform show -json plan.tfplan 2>/dev/null | jq -r '
+    #       .resource_changes[]? | 
+    #       "\(.address): \(.change.actions[]) | Type: \(.type)"
+    #     ' >> change_analysis.txt || echo "No JSON analysis available" >> change_analysis.txt
+        
+    #     echo "CHANGE_ANALYSIS<<EOF" >> $GITHUB_ENV
+    #     cat change_analysis.txt >> $GITHUB_ENV
+    #     echo "EOF" >> $GITHUB_ENV
+        
+    #     # Exit code handling for detailed-exitcode
+    #     if [ $PLAN_EXIT_CODE -eq 1 ]; then
+    #       echo "❌ Terraform plan failed"
+    #       exit 1
+    #     elif [ $PLAN_EXIT_CODE -eq 2 ]; then
+    #       echo "⚠️ Plan has changes (exit code 2 - this is normal)"
+    #     elif [ $PLAN_EXIT_CODE -eq 0 ]; then
+    #       echo "✅ No changes detected"
+    #     fi
+    #   working-directory: ${{ env.TF_WORKING_DIR }}
+    #   env:
+    #     ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+    #     ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+    #     ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID_DEV }}
+    #     ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
     - name: Terraform Plan
       id: plan
       run: |
-        # Run plan and capture exit code
         set +e
         terraform plan -input=false -no-color -out=plan.tfplan -detailed-exitcode
         PLAN_EXIT_CODE=$?
         set -e
-        
-        # Show the detailed plan
+
+        # Full plan text
         echo "PLAN_SUMMARY<<EOF" >> $GITHUB_ENV
         terraform show -no-color plan.tfplan >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
-        
-        # Analyze what's changing
-        echo "=== RESOURCE CHANGE ANALYSIS ===" > change_analysis.txt
-        terraform show -json plan.tfplan 2>/dev/null | jq -r '
-          .resource_changes[]? | 
-          "\(.address): \(.change.actions[]) | Type: \(.type)"
-        ' >> change_analysis.txt || echo "No JSON analysis available" >> change_analysis.txt
-        
-        echo "CHANGE_ANALYSIS<<EOF" >> $GITHUB_ENV
-        cat change_analysis.txt >> $GITHUB_ENV
+
+        # === DETAILED CHANGE DIFF (human-readable) ===
+        echo "=== DETAILED DIFF ===" > detailed_diff.txt
+        terraform show plan.tfplan -no-color | \
+          grep -E "  [~+-] " | \
+          sed 's/^/    /' >> detailed_diff.txt  # indent for markdown
+
+        if [ ! -s detailed_diff.txt ] || grep -q "No changes" detailed_diff.txt; then
+          echo "    No attribute-level changes detected." >> detailed_diff.txt
+        fi
+
+        echo "DETAILED_DIFF<<EOF" >> $GITHUB_ENV
+        cat detailed_diff.txt >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
-        
-        # Exit code handling for detailed-exitcode
+
+        # === COMPACT CHANGE SUMMARY (address + action) ===
+        echo "=== RESOURCE CHANGE SUMMARY ===" > change_summary.txt
+        terraform show -json plan.tfplan 2>/dev/null | jq -r '
+          .resource_changes[]? |
+          "\(.address): \(.change.actions[] | ascii_upcase) | Type: \(.type)"
+        ' >> change_summary.txt || echo "No changes" >> change_summary.txt
+
+        echo "CHANGE_SUMMARY<<EOF" >> $GITHUB_ENV
+        cat change_summary.txt >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
+
+        # Exit code handling
         if [ $PLAN_EXIT_CODE -eq 1 ]; then
-          echo "❌ Terraform plan failed"
-          exit 1
+          echo "Terraform plan failed"; exit 1
         elif [ $PLAN_EXIT_CODE -eq 2 ]; then
-          echo "⚠️ Plan has changes (exit code 2 - this is normal)"
+          echo "Plan has changes"
         elif [ $PLAN_EXIT_CODE -eq 0 ]; then
-          echo "✅ No changes detected"
+          echo "No changes"
         fi
       working-directory: ${{ env.TF_WORKING_DIR }}
       env:
@@ -96,38 +149,83 @@ jobs:
         ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID_DEV }}
         ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
+
+    # - name: Add Plan as PR Comment
+    #   uses: actions/github-script@v6
+    #   with:
+    #     script: |
+    #       const planSummary = process.env.PLAN_SUMMARY || 'No plan summary available';
+    #       const changeAnalysis = process.env.CHANGE_ANALYSIS || 'No change analysis available';
+          
+    #       const output = `### 🔍 Terraform Plan - Dev Environment
+
+    #       #### Quality Checks:
+    #       ✅ **Format**: \`${{ steps.fmt.outcome }}\`
+    #       ✅ **Init**: \`${{ steps.init.outcome }}\`  
+    #       ✅ **Validate**: \`${{ steps.validate.outcome }}\`
+    #       ✅ **Plan**: \`${{ steps.plan.outcome }}\`
+
+    #       #### Change Analysis:
+    #       \`\`\`
+    #       ${changeAnalysis}
+    #       \`\`\`
+
+    #       #### Plan Summary:
+    #       <details>
+    #       <summary>📋 Click to see full plan</summary>
+
+    #       \`\`\`terraform
+    #       ${planSummary}
+    #       \`\`\`
+
+    #       </details>
+
+    #       ---
+    #       *PR: #${{ github.event.pull_request.number }} | Commit: \`${{ github.event.pull_request.head.sha }}\`*`;
+
+    #       github.rest.issues.createComment({
+    #         issue_number: context.issue.number,
+    #         owner: context.repo.owner,
+    #         repo: context.repo.repo,
+    #         body: output
+    #       })
+
     - name: Add Plan as PR Comment
       uses: actions/github-script@v6
       with:
         script: |
-          const planSummary = process.env.PLAN_SUMMARY || 'No plan summary available';
-          const changeAnalysis = process.env.CHANGE_ANALYSIS || 'No change analysis available';
-          
-          const output = `### 🔍 Terraform Plan - Dev Environment
+          const planSummary = process.env.PLAN_SUMMARY || 'No plan summary';
+          const changeSummary = process.env.CHANGE_SUMMARY || 'No changes';
+          const detailedDiff = process.env.DETAILED_DIFF || 'No detailed diff available';
 
-          #### Quality Checks:
-          ✅ **Format**: \`${{ steps.fmt.outcome }}\`
-          ✅ **Init**: \`${{ steps.init.outcome }}\`  
-          ✅ **Validate**: \`${{ steps.validate.outcome }}\`
-          ✅ **Plan**: \`${{ steps.plan.outcome }}\`
+          const output = `### Terraform Plan - Dev Environment
 
-          #### Change Analysis:
+          #### Quality Checks
+          **Format**: \`${{ steps.fmt.outcome }}\`  
+          **Init**: \`${{ steps.init.outcome }}\`  
+          **Validate**: \`${{ steps.validate.outcome }}\`  
+          **Plan**: \`${{ steps.plan.outcome }}\`
+
+          #### Resource Changes (Summary)
           \`\`\`
-          ${changeAnalysis}
+          ${changeSummary}
           \`\`\`
 
-          #### Plan Summary:
-          <details>
-          <summary>📋 Click to see full plan</summary>
+          #### What Actually Changed (Diff)
+          \`\`\`diff
+          ${detailedDiff}
+          \`\`\`
+
+          #### Full Plan Output
+          <details><summary>Click to expand full terraform plan</summary>
 
           \`\`\`terraform
           ${planSummary}
           \`\`\`
-
           </details>
 
           ---
-          *PR: #${{ github.event.pull_request.number }} | Commit: \`${{ github.event.pull_request.head.sha }}\`*`;
+          *PR #${{ github.event.pull_request.number }} • Commit \`${{ github.event.pull_request.head.sha }}\`*`;
 
           github.rest.issues.createComment({
             issue_number: context.issue.number,

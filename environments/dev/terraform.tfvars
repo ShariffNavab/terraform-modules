@@ -12,7 +12,7 @@ resource_groups = {
     location = "centralindia"
     tags = {
       environment = "dummy"
-      project     = "dev-app"
+      project     = "dummy-app"
       managed-by  = "shariff"
     }
   }
