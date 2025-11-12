@@ -16,6 +16,14 @@ resource_groups = {
       managed-by  = "terraform"
     }
   }
+  prod-rg = {
+    location = "southindia"
+    tags = {
+      environment = "prod"
+      project     = "prod-app"
+      managed-by  = "terraform"
+    }
+  }
 }
 
 # storage-accounts configurations - ACTUAL VALUES
