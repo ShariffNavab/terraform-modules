@@ -8,9 +8,10 @@ resource "azurerm_storage_account" "storage" {
   account_replication_type = each.value.account_replication_type
   account_kind             = each.value.account_kind
 
-  tags = merge(each.value.tags, {
-    managed-by = "terraform"
-  })
+  tags = each.value.tags
+  # tags = merge(each.value.tags, {
+  #   managed-by = "terraform"
+  # })
 }
 
 
