@@ -59,3 +59,13 @@ terraform-modules-repo/
 ├── README.md
 └── versions.tf
 ```
+
+## Import
+
+```
+/subscriptions/d9577420-7ac0-4876-9eb6-0e57cc547348/resourceGroups/qa-rg
+```
+
+```
+terraform import 'module.resource_groups.azurerm_resource_group.rgs["qa-rg"]' /subscriptions/d9577420-7ac0-4876-9eb6-0e57cc547348/resourceGroups/qa-rg
+```
