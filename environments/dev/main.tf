@@ -5,7 +5,6 @@ module "resource_groups" {
   resource_groups = var.resource_groups
 }
 
-
 # Storage Account Module
 
 module "storage_accounts" {
