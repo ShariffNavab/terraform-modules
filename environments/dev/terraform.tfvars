@@ -13,7 +13,7 @@ resource_groups = {
     tags = {
       environment = "dummy"
       project     = "dummy-app"
-      managed-by  = "terraform"
+      managed-by  = "shariff"
     }
   }
 }
