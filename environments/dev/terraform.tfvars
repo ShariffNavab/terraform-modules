@@ -8,15 +8,8 @@ resource_groups = {
       managed-by  = "terraform"
     }
   }
-  dummy-rg = {
-    location = "centralindia"
-    tags = {
-      environment = "dummy"
-      project     = "dummy-app"
-      managed-by  = "shariff"
-    }
-  }
 }
+
 
 # storage-accounts configurations - ACTUAL VALUES
 storage_accounts = {
