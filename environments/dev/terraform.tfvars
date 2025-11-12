@@ -24,6 +24,14 @@ resource_groups = {
       managed-by  = "terraform"
     }
   }
+  dummy-rg = {
+    location = "southindia"
+    tags = {
+      environment = "dummy"
+      project     = "dummy-app"
+      managed-by  = "terraform"
+    }
+  }
 }
 
 # storage-accounts configurations - ACTUAL VALUES
