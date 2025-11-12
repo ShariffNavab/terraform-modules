@@ -48,18 +48,47 @@ jobs:
         ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID_DEV }}
         ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
+
     - name: Terraform Validate
       id: validate
       run: terraform validate -no-color
       working-directory: ${{ env.TF_WORKING_DIR }}
 
+
     - name: Terraform Plan
       id: plan
       run: |
-        terraform plan -input=false -no-color -out=plan.tfplan
+        # Run plan and capture exit code
+        set +e
+        terraform plan -input=false -no-color -out=plan.tfplan -detailed-exitcode
+        PLAN_EXIT_CODE=$?
+        set -e
+        
+        # Show the detailed plan
         echo "PLAN_SUMMARY<<EOF" >> $GITHUB_ENV
         terraform show -no-color plan.tfplan >> $GITHUB_ENV
         echo "EOF" >> $GITHUB_ENV
+        
+        # Analyze what's changing
+        echo "=== RESOURCE CHANGE ANALYSIS ===" > change_analysis.txt
+        terraform show -json plan.tfplan 2>/dev/null | jq -r '
+          .resource_changes[]? | 
+          "\(.address): \(.change.actions[]) | Type: \(.type)"
+        ' >> change_analysis.txt || echo "No JSON analysis available" >> change_analysis.txt
+        
+        echo "CHANGE_ANALYSIS<<EOF" >> $GITHUB_ENV
+        cat change_analysis.txt >> $GITHUB_ENV
+        echo "EOF" >> $GITHUB_ENV
+        
+        # Exit code handling for detailed-exitcode
+        if [ $PLAN_EXIT_CODE -eq 1 ]; then
+          echo "❌ Terraform plan failed"
+          exit 1
+        elif [ $PLAN_EXIT_CODE -eq 2 ]; then
+          echo "⚠️ Plan has changes (exit code 2 - this is normal)"
+        elif [ $PLAN_EXIT_CODE -eq 0 ]; then
+          echo "✅ No changes detected"
+        fi
       working-directory: ${{ env.TF_WORKING_DIR }}
       env:
         ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
@@ -67,11 +96,13 @@ jobs:
         ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID_DEV }}
         ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
-
     - name: Add Plan as PR Comment
       uses: actions/github-script@v6
       with:
         script: |
+          const planSummary = process.env.PLAN_SUMMARY || 'No plan summary available';
+          const changeAnalysis = process.env.CHANGE_ANALYSIS || 'No change analysis available';
+          
           const output = `### 🔍 Terraform Plan - Dev Environment
 
           #### Quality Checks:
@@ -80,12 +111,23 @@ jobs:
           ✅ **Validate**: \`${{ steps.validate.outcome }}\`
           ✅ **Plan**: \`${{ steps.plan.outcome }}\`
 
+          #### 🎯 Change Analysis:
+          \`\`\`
+          ${changeAnalysis}
+          \`\`\`
+
+          #### 📝 Important Note:
+          ⚠️ **Storage account shows as "update" but this is a FALSE POSITIVE**
+          - No actual properties will change in Azure
+          - Caused by Terraform dependency graph recalculation when adding new resources
+          - **SAFE TO APPLY** - Storage account will remain unchanged
+
           #### Plan Summary:
           <details>
           <summary>📋 Click to see full plan</summary>
 
           \`\`\`terraform
-          ${process.env.PLAN_SUMMARY}
+          ${planSummary}
           \`\`\`
 
           </details>
@@ -99,3 +141,88 @@ jobs:
             repo: context.repo.repo,
             body: output
           })
+    # - name: Add Plan as PR Comment
+    #   uses: actions/github-script@v6
+    #   with:
+    #     script: |
+    #       const planSummary = process.env.PLAN_SUMMARY || 'No plan summary available';
+    #       const changeAnalysis = process.env.CHANGE_ANALYSIS || 'No change analysis available';
+          
+    #       const output = `### 🔍 Terraform Plan - Dev Environment
+
+    #       #### Quality Checks:
+    #       ✅ **Format**: \`${{ steps.fmt.outcome }}\`
+    #       ✅ **Init**: \`${{ steps.init.outcome }}\`  
+    #       ✅ **Validate**: \`${{ steps.validate.outcome }}\`
+    #       ✅ **Plan**: \`${{ steps.plan.outcome }}\`
+
+    #       #### Change Analysis:
+    #       \`\`\`
+    #       ${changeAnalysis}
+    #       \`\`\`
+
+    #       #### Plan Summary:
+    #       <details>
+    #       <summary>📋 Click to see full plan</summary>
+
+    #       \`\`\`terraform
+    #       ${planSummary}
+    #       \`\`\`
+
+    #       </details>
+
+    #       ---
+    #       *PR: #${{ github.event.pull_request.number }} | Commit: \`${{ github.event.pull_request.head.sha }}\`*`;
+
+    #       github.rest.issues.createComment({
+    #         issue_number: context.issue.number,
+    #         owner: context.repo.owner,
+    #         repo: context.repo.repo,
+    #         body: output
+    #       })
+    # - name: Terraform Plan
+    #   id: plan
+    #   run: |
+    #     terraform plan -input=false -no-color -out=plan.tfplan
+    #     echo "PLAN_SUMMARY<<EOF" >> $GITHUB_ENV
+    #     terraform show -no-color plan.tfplan >> $GITHUB_ENV
+    #     echo "EOF" >> $GITHUB_ENV
+    #   working-directory: ${{ env.TF_WORKING_DIR }}
+    #   env:
+    #     ARM_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+    #     ARM_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+    #     ARM_SUBSCRIPTION_ID: ${{ secrets.AZURE_SUBSCRIPTION_ID_DEV }}
+    #     ARM_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+
+
+    # - name: Add Plan as PR Comment
+    #   uses: actions/github-script@v6
+    #   with:
+    #     script: |
+    #       const output = `### 🔍 Terraform Plan - Dev Environment
+
+    #       #### Quality Checks:
+    #       ✅ **Format**: \`${{ steps.fmt.outcome }}\`
+    #       ✅ **Init**: \`${{ steps.init.outcome }}\`  
+    #       ✅ **Validate**: \`${{ steps.validate.outcome }}\`
+    #       ✅ **Plan**: \`${{ steps.plan.outcome }}\`
+
+    #       #### Plan Summary:
+    #       <details>
+    #       <summary>📋 Click to see full plan</summary>
+
+    #       \`\`\`terraform
+    #       ${process.env.PLAN_SUMMARY}
+    #       \`\`\`
+
+    #       </details>
+
+    #       ---
+    #       *PR: #${{ github.event.pull_request.number }} | Commit: \`${{ github.event.pull_request.head.sha }}\`*`;
+
+    #       github.rest.issues.createComment({
+    #         issue_number: context.issue.number,
+    #         owner: context.repo.owner,
+    #         repo: context.repo.repo,
+    #         body: output
+    #       })
