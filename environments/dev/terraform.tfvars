@@ -7,6 +7,22 @@ resource_groups = {
       project     = "dev-app"
       managed-by  = "terraform"
     }
+  },
+  qa-rg = {
+    location = "southindia"
+    tags = {
+      environment = "dev"
+      project     = "dev-app"
+      managed-by  = "terraform"
+    }
+  },
+  dev-rg = {
+    location = "centralindia"
+    tags = {
+      environment = "dev"
+      project     = "dev-app"
+      managed-by  = "terraform"
+    }
   }
 }
 
