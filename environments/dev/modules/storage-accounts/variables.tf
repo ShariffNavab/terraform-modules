@@ -1,15 +1,5 @@
-# Define the variable structure - but NO default values here either
-variable "resource_groups" {
-  description = "Map of resource groups to create in dev environment"
-  type = map(object({
-    location = string
-    tags     = map(string)
-  }))
-}
-
-# Storage Accounts Variables
 variable "storage_accounts" {
-  description = "Storage account configurations"
+  description = "Map of storage account configurations"
   type = map(object({
     name                     = string
     resource_group_name      = string
@@ -28,9 +18,7 @@ variable "storage_accounts" {
 
     tags = map(string)
   }))
-  default = {}
 }
-
 
 variable "containers" {
   description = "Container configurations with unique keys"
