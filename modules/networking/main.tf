@@ -5,6 +5,7 @@ resource "azurerm_virtual_network" "vnet" {
   address_space       = var.address_space
 }
 
+# subnets
 resource "azurerm_subnet" "subnets" {
   for_each = var.subnets
 
@@ -14,6 +15,7 @@ resource "azurerm_subnet" "subnets" {
   address_prefixes     = each.value.address_prefixes
 }
 
+# NSG
 resource "azurerm_network_security_group" "nsg" {
   for_each = var.network_security_groups
 
@@ -72,6 +74,7 @@ resource "azurerm_subnet_network_security_group_association" "subnet_nsg" {
   network_security_group_id = azurerm_network_security_group.nsg[each.value.nsg_key].id
 }
 
+# fire wall
 resource "azurerm_subnet" "firewall_subnet" {
   count                = var.enable_firewall ? 1 : 0
   name                 = "AzureFirewallSubnet"
